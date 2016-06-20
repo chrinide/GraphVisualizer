@@ -178,7 +178,7 @@ var vis = body.append("svg")
    .attr("width", width)
    .attr("height", height);
 
-d3.json("graph_v3.json", function(json) {
+d3.json("graph.json", function(json) {
   data = json;
   for (var i=0; i<data.links.length; ++i) {
     o = data.links[i];

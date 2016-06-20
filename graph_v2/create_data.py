@@ -6,16 +6,17 @@ from random import randint
 import csv
 from collections import defaultdict
 
+
 def main():
     node_num = 1000
     edge_num = 1000
-    node_header = ['ID', 'name', 'phone','email', 'IP', 'clusterID']
+    node_header = ['ID', 'name', 'phone', 'email', 'IP', 'clusterID']
     nodes = create_nodes(node_num)
 
-    edge_header = ['ID1','ID2','type','connection']
+    edge_header = ['ID1', 'ID2', 'type', 'connection']
     edges = create_edges(nodes[:], edge_num)
-    save_csv('nodes4.csv', nodes, header=node_header)
-    save_csv('edges4.csv', edges, header=edge_header)
+    save_csv('nodes.csv', nodes, header=node_header)
+    save_csv('edges.csv', edges, header=edge_header)
 
 
 def save_csv(name, array, header=''):
