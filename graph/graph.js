@@ -107,19 +107,19 @@ d3.json("graph.json", function(error, graph) {
                'id':function(d,i) {return 'linkpath'+i}})
         .style("pointer-events", "none");
 
-    var linklabels = g.selectAll(".linklabel")
+    var linktext = g.selectAll(".linktext")
         .data(graph.links)
         .enter()
         .append('text')
         .style("pointer-events", "none")
-        .attr({'class':'linklabel',
-               'id':function(d,i){return 'linklabel'+i},
+        .attr({'class':'linktext',
+               'id':function(d,i){return 'linktext'+i},
                'dx':50,
                'dy':0,
                'font-size':10,
                'fill':'black'});
 
-        linklabels.append('textPath')
+        linktext.append('textPath')
             .attr("text-anchor", "middle")
             .attr('xlink:href',function(d,i) {return '#linkpath'+i})
             .style("pointer-events", "none")
@@ -209,11 +209,11 @@ d3.json("graph.json", function(error, graph) {
         {
             svg.style("cursor","move");
             if (highlight_color!="white")
-        {
-          circle.style(towhite, "white");
-          text.style("font-weight", "normal");
-          link.style("stroke",  function(d) {return color_link(d.type);});
-     }
+            {
+                circle.style(towhite, "white");
+                text.style("font-weight", "normal");
+                link.style("stroke",  function(d) {return color_link(d.type);});
+            }
 
         }
     }
@@ -282,7 +282,7 @@ d3.json("graph.json", function(error, graph) {
                                        //console.log(d)
                                        return path});
 
-    linklabels.attr('transform',function(d,i){
+    linktext.attr('transform',function(d,i){
         if (d.target.x<d.source.x){
             bbox = this.getBBox();
             rx = bbox.x+bbox.width/2;
