@@ -1,0 +1,90 @@
+pre#node_csv {display:none;}
+  body {
+    overflow: hidden;
+    overflow: hidden;
+    margin: 0;
+  }
+  text {
+    font-family: sans-serif;
+    pointer-events: none;
+  }
+  #table-location {
+    margin-left: 0;
+      margin-right: auto;
+      width: 70%;
+  }
+  rect {
+    fill: none;
+    pointer-events: all;
+}
+
+.feature {
+    fill: #ccc;
+    cursor: pointer;
+}
+
+ .feature.active {
+     fill: orange;
+ }
+
+.mesh {
+    fill: none;
+    stroke: #fff;
+    stroke-width: .5px;
+    stroke-linejoin: round;
+}
+
+    .csvTable table {
+        border-collapse: collapse;
+        text-align: left;
+        width: 100%;
+    }
+
+    .csvTable {
+        font: normal 12px/150% Arial, Helvetica, sans-serif;
+        background: #fff;
+        overflow: hidden;
+        border: 1px solid #069;
+        -webkit-border-radius: 3px;
+        -moz-border-radius: 3px;
+        border-radius: 3px;
+    }
+
+    .csvTable table td, .csvTable table th {
+        padding: 3px 10px;
+    }
+
+    .csvTable table thead th {
+        background: 0;
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#006699',endColorstr='#00557F');
+        background-color: #006D2C;
+        color: #FFF;
+        font-size: 15px;
+        font-weight: 700;
+        border-left: 1px solid #0070A8;
+    }
+
+        .csvTable table thead th:first-child {
+            border: none;
+        }
+
+    .csvTable table tbody td {
+        color: #00496B;
+        border-left: 1px solid #E1EEF4;
+        font-size: 12px;
+        border-bottom: 1px solid #E1EEF4;
+        font-weight: 400;
+    }
+
+        .csvTable table tbody td:first-child {
+            border-left: none;
+        }
+
+    .csvTable table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .csvTable tr:hover td {
+        background-color: #069;
+        color: white;
+    }
