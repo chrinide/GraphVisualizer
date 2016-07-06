@@ -1,3 +1,4 @@
+console.clear();
 var w = window.innerWidth;
 var h = window.innerHeight;
 var keyc = true,
@@ -14,13 +15,15 @@ var keyc = true,
   key3 = true,
   key0 = true;
 
+var curve_multiplier = 100;
+var log_curve_multiplier = 2;
 var default_node_color = "#ccc";
 var default_link_color = "#888";
 var size_multiplier = 1.5;
-var base_radius = 10
+var base_radius = 14
 var node_size = Math.PI * Math.pow(base_radius, 2);
 var highlight_node_size = Math.PI * Math.pow(base_radius*size_multiplier, 2);
-var nominal_text_size = 10;
+var nominal_text_size = 5;
 var highlight_text_size = nominal_text_size*size_multiplier;
 var max_text_size = 24;
 var nominal_stroke = 1.5;
@@ -48,9 +51,12 @@ var focus_node = null,
   highlight_node = null;
 var text_center = false;
 var outline = false;
-var node_color = d3.scale.linear()
-  .domain([1, 2, 3, 4, 5])
-  .range(["lightcyan", "violet", "lightgreen", "gold", "tomato"]);
+
+function node_color(n) {
+  var colors = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477", "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc", "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
+  return colors[n % colors.length];}
+
+//var node_color = d3.scale.linear().domain([1, 2, 3, 4, 5]).range(["lightcyan", "violet", "lightgreen", "gold", "tomato"]);
 
 var link_color = d3.scale.ordinal()
   .domain(["IP", "email", "phone"])
@@ -61,7 +67,7 @@ var size = d3.scale.pow().exponent(1)
   .range([8, 24]);
 
 var force = d3.layout.force()
-  .linkDistance(100)
+  .linkDistance(150)
   .charge(-500)
   .size([w, h]);
 
@@ -71,6 +77,12 @@ graph = JSON.parse(mis);
 //d3.json("../data/graph_100n_100e_5c_v1.json", function(error, graph) {
 //console.log(graph);
 /////////////////////////////START OF GRAPH CODE//////////////////////////////////////
+
+//console.log(d3.keys(graph.nodes[0]));
+var node_headers = d3.keys(graph.nodes[0]);
+var link_headers = d3.keys(graph.links[0]);
+var original_graph = graph;
+
 
 var linkedByIndex = {};
 graph.links.forEach(function(d) {
@@ -89,6 +101,27 @@ function hasConnections(a) {
   return false;
 }
 
+//sort links by source, then target
+graph.links.sort(function(a,b) {
+    if (a.source > b.source) {return 1;}
+    else if (a.source < b.source) {return -1;}
+    else {8
+        if (a.target > b.target) {return 1;}
+        if (a.target < b.target) {return -1;}
+        else {return 0;}
+    }
+});
+
+//any links with duplicate source and target get an incremented 'linknum'
+for (var i=0; i<graph.links.length; i++) {
+    if (i != 0 &&
+        graph.links[i].source == graph.links[i-1].source &&
+        graph.links[i].target == graph.links[i-1].target) {
+            graph.links[i].linknum = graph.links[i-1].linknum + 1;
+        }
+    else {graph.links[i].linknum = 1;};
+};
+
 force
   .nodes(graph.nodes)
   .links(graph.links)
@@ -96,24 +129,15 @@ force
 
 var link = g.selectAll(".link")
   .data(graph.links)
-  .enter().append("line")
-  .attr("class", "link")
+  .enter().append("path")
+  .attr({
+    "class": "link",
+    'fill-opacity':0,
+    'id': function(d,i) {return 'link'+i},
+
+    })
   .style("stroke-width", nominal_stroke)
   .style("stroke", function(d) {return link_color(d.type);})
-
-
-var linkpaths = g.selectAll(".linkpath")
-  .data(graph.links)
-  .enter()
-  .append('path')
-  .attr({'d': function(d) {return 'M '+d.source.x+' '+d.source.y+' L '+ d.target.x +' '+d.target.y},
-         'class':'linkpath',
-         'fill-opacity':0,
-         'stroke-opacity':0,
-         'fill':'blue',
-         'stroke':'red',
-         'id':function(d,i) {return 'linkpath'+i}})
-  .style("pointer-events", "none");
 
 var linktext = g.selectAll(".linktext")
   .data(graph.links)
@@ -122,50 +146,57 @@ var linktext = g.selectAll(".linktext")
   .style("pointer-events", "none")
   .attr({'class':'linktext',
          'id':function(d,i){return 'linktext'+i},
-         'dx':50,
-         'dy':10,
+         'dx': 75,
+         'dy': 6,
          'font-size': nominal_text_size + "px",
          'fill':'black'});
 
 linktext.append('textPath')
   .attr("text-anchor", "middle")
-  .attr('xlink:href',function(d,i) {return '#linkpath'+i})
+  .attr('xlink:href',function(d,i) {return '#link'+i})
   .style("pointer-events", "none")
   .text(function(d){return d.type});
 
 //node tooltip text
 link.append("title")
   .text(function(d) {
-  return "communication type: " + d.type + "\n" + "source value: " + d.value;});
+    var link_info = "";
+    for (i = 0; i < link_headers.length; i++) {
+      if (link_headers[i] != "target" && link_headers[i] != "source" && link_headers[i] != "key"){
+     	 	var attr_line = link_headers[i] + ": " + d[link_headers[i]];
+      		link_info += attr_line;
+      	if (i != link_headers.length - 1){link_info += "\n";};
+      	};
+      };
+    return link_info;
+    });
 
+// link tooltip
 link.on("mouseover", function(d) {
-	svg.style("cursor", "pointer");
-  //d.style("stroke-width", highlight_stroke);
+	console.log("mouseover on link");
+  svg.style("cursor", "pointer");
+  link.style("stroke-width", function(o) { return o == d ? highlight_stroke : nominal_stroke;});
+  linktext.style("font-weight", function(o) { return o == d ? "bold" : "normal";});
+  })
+  .on("mouseout", function(d) {
+	console.log("mouseover on link");
+  svg.style("cursor", "pointer");
+  link.style("stroke-width", nominal_stroke);
+  linktext.style("font-weight", "normal");
   });
-
-/*
-//linktext tooltip text
-linktext.append("title")
-  .text(function(d) {
-  return "source ID: " + d.source + "\n" + "target ID: " + d.target + "\n" + "communication type: " + d.type + "\n" + "source value: " + d.value;});
-
-linktext.on("mouseover", function(d) {
-	svg.style("cursor", "pointer");
-  //d.style("stroke-width", highlight_stroke);
-  });
-*/
 
 var node = g.selectAll(".node")
   .data(graph.nodes)
   .enter().append("g")
-  .attr("class", "node")
+  .attr({"class": "node", "id": function(d){return d.id}})
   .call(force.drag);
+
 
 var circle = node.append("path")
   .attr("d", d3.svg.symbol()
         .size(node_size)
         .type(function(d) {return d.type;}))
-  .style("fill", function(d) {return node_color(d.clusterID);})
+  .style("fill", function(d) {return node_color(d.Cluster);})
   .style("stroke-width", nominal_stroke)
   .style("stroke", node_stroke_color);
 
@@ -179,11 +210,17 @@ var text = g.selectAll(".text")
     text.text(function(d) {return d.id;})
         .style("text-anchor", "middle");
 
-
 //node tooltip text
 node.append("title")
   .text(function(d) {
-  return  "ID: " + d.id + "\n" + "name: " + d.name + "\n" + "clusterID: " + d.clusterID + "\n" + "phone: " + d.phone + "\n" + "email: " + d.email + "\n" + "IP: " + d.IP;});
+    var node_info = "";
+    for (i = 0; i < node_headers.length; i++) {
+      var attr_line = node_headers[i] + ": " + d[node_headers[i]];
+      node_info += attr_line;
+      if (i != node_headers.length - 1){node_info += "\n";};
+      };
+    return node_info;
+    });
 
 node.on("dblclick.zoom", function(d) {
   d3.event.stopPropagation();
@@ -222,7 +259,7 @@ function set_focus(d) {
       .style("stroke-width", function(o) {return isConnected(d, o) ? highlight_stroke : nominal_stroke;});
     circle.attr("d", d3.svg.symbol().size(function(o) {return isConnected(d, o) ? highlight_node_size: node_size;}));
     text.style("opacity", function(o) {return isConnected(d, o) ? 1 : highlight_trans;})
-			.style("font-size", function(o) {return isConnected(d, o) ? highlight_text_size + "px" : nominal_text_size + "px";});
+      .style("font-size", function(o) {return isConnected(d, o) ? highlight_text_size + "px" : nominal_text_size + "px";});
     link.style("opacity", function(o) { return o.source.index == d.index || o.target.index == d.index ? 1 : highlight_trans;});
     linktext.style("opacity", function(o) { return o.source.index == d.index || o.target.index == d.index ? 1 : highlight_trans;});
   }
@@ -236,7 +273,7 @@ function set_highlight(d) {
     .style("stroke-width", function(o) {return isConnected(d, o) ? highlight_stroke : nominal_stroke;});
   circle.attr("d", d3.svg.symbol().size(function(o) {return isConnected(d, o) ? highlight_node_size: node_size;}));
   text.style("font-weight", function(o) {return isConnected(d, o) ? "bold" : "normal";})
-  	.style("font-size", function(o) {return isConnected(d, o) ? highlight_text_size + "px" : nominal_text_size + "px";});
+    .style("font-size", function(o) {return isConnected(d, o) ? highlight_text_size + "px" : nominal_text_size + "px";});
   text.attr("dy", ".40em");
   link.style("stroke-width", function(o) { return o.source.index == d.index || o.target.index == d.index ? highlight_stroke : nominal_stroke;});
   linktext.style("font-weight", function(o) { return o.source.index == d.index || o.target.index == d.index ? "bold" : "normal";});
@@ -247,14 +284,15 @@ function exit_highlight() {
   if (focus_node === null) {
     svg.style("cursor", "move");
     link.style("opacity", 1)
-    	.style("stroke-width", nominal_stroke);
+      .style("stroke-width", nominal_stroke);
     linktext.style("font-weight", "normal")
       .style("opacity", 1);
     circle.style("stroke", node_stroke_color)
-      .style("stroke-width", nominal_stroke);
+      .style("stroke-width", nominal_stroke)
+      .style("opacity", 1);
     circle.attr("d", d3.svg.symbol().size(node_size));
     text.style("font-weight", "normal")
-    	.style("opacity", 1)
+      .style("opacity", 1)
       .style("font-size", nominal_text_size);
     text.attr("dy", ".35em");
   }
@@ -263,17 +301,15 @@ function exit_highlight() {
 zoom.on("zoom", function() {
   var stroke = nominal_stroke;
   if (nominal_stroke * zoom.scale() > max_stroke) stroke = max_stroke / zoom.scale();
-  link.style("stroke-width", stroke);
-  circle.style("stroke-width", stroke);
+  //link.style("stroke-width", stroke);
+  //circle.style("stroke-width", stroke);
   var base_radius = node_size;
   if (node_size * zoom.scale() > max_base_node_size) base_radius = max_base_node_size / zoom.scale();
-  circle.attr("d", d3.svg.symbol()
-    .size(node_size)
-    .type(function(d) {return d.type;}));
-  text.attr("dx", 0);
+  //circle.attr("d", d3.svg.symbol().size(node_size).type(function(d) {return d.type;}));
+  //text.attr("dx", 0);
   var text_size = nominal_text_size;
   if (nominal_text_size * zoom.scale() > max_text_size) text_size = max_text_size / zoom.scale();
-  text.style("font-size", text_size + "px");
+  //text.style("font-size", text_size + "px");
   g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");});
 
 svg.call(zoom);
@@ -282,6 +318,8 @@ resize();
 //window.focus();
 d3.select(window).on("resize", resize).on("keydown", keydown);
 
+//console.log(JSON.stringify(graph.links));
+
 force.on("tick", function() {
 
   node.attr("transform", function(d) {
@@ -289,18 +327,15 @@ force.on("tick", function() {
   text.attr("transform", function(d) {
     return "translate(" + d.x + "," + d.y + ")";});
 
-  link.attr("x1", function(d) {
-    return d.source.x;})
-    .attr("y1", function(d) {
-    return d.source.y;})
+  link.attr("x1", function(d) {return d.source.x;})
+    .attr("y1", function(d) {return d.source.y;})
     .attr("x2", function(d) {return d.target.x;})
     .attr("y2", function(d) {return d.target.y;});
 
   node.attr("cx", function(d) {return d.x;})
     .attr("cy", function(d) {return d.y;});
-  linkpaths.attr('d', function(d) { var path='M '+d.source.x+' '+d.source.y+' L '+ d.target.x +' '+d.target.y;
-                                   //console.log(d)
-                                   return path});
+
+  link.attr('d', function(d) {if(d.linknum == 1){var dr = 0; return "M" + d.source.x + " " + d.source.y + " A" + dr + " " + dr + " 0 " + 0 + " " + d.linknum%2 +  " " + d.target.x + " " + d.target.y;}else{var dr = 120 - 10*(d.linknum - d.linknum%2); return "M" + d.source.x + " " + d.source.y + " A" + dr + " " + dr + " 0 " + 0 + " " + d.linknum%2 +  " " + d.target.x + " " + d.target.y;}});
 
   linktext.attr('transform',function(d,i){
   if (d.target.x<d.source.x){
@@ -319,8 +354,7 @@ function resize() {
   w = width;
   h = height;
 }
-
-/////////////////////////// NODE SEARCH BAR FUNCTIONALITY////////////////////////////////
+//////////////// NODE SEARCH BAR FUNCTIONALITY////////////
 
 var optArray = [];
 for (var i = 0; i < graph.nodes.length - 1; i++) {
@@ -328,6 +362,7 @@ for (var i = 0; i < graph.nodes.length - 1; i++) {
 }
 optArray = optArray.sort();
 /*
+//autocomplete functionality for search bar *broken*
 $(function() {
   $("#search").autocomplete({
     source: optArray
@@ -338,23 +373,46 @@ $(function() {
 function searchNode() {
   //find the node
   var selectedVal = document.getElementById('search').value;
+  var column_index = 0;
+  for (i = 0; i < node_headers.length; i++) {
+  	var column_name = node_headers[i];
+  	console.log("node_header[" + i + "]=", column_name);
+  	var colType = selectedVal.search(column_name);
+    console.log("start position:", colType);
+  	if (colType == 0) {
+    	var column_index = i;
+      selectedVal = selectedVal.slice(column_name.length + 2);
+      console.log("attribute specified!");
+      break;
+      }
+    else {
+    console.log("attribute specification must be at the beginning, separated by a colon e.g. name:JmURUKjgmDrY. default search is by the first column.");
+    	};
+    };
   if (selectedVal == "none") {node.style("stroke", "white").style("stroke-width", "1");}
   else {
-  	var search_time = 4000;
-    var unselected_nodes = node.filter(function(d) {return d.id != selectedVal;});
-    var unselected_text = text.filter(function(d) {return d.id != selectedVal;});
-    unselected_nodes.style("opacity", highlight_trans).transition().duration(search_time).style("opacity", 1);
-    unselected_text.style("opacity", highlight_trans).transition().duration(search_time).style("opacity", 1);
-    //var selected_node = node.filter(function(d) {return d.id === selectedVal;});
-    //set_focus(selected_node);
-    var link = g.selectAll(".link");
-    link.style("opacity", highlight_trans).transition().duration(search_time).style("opacity", 1);
-    var linktext = g.selectAll(".linktext");
-    linktext.style("opacity", highlight_trans).transition().duration(search_time).style("opacity", 1);
+    //var column_index = 2;
+    console.log("column_index=", column_index);
+    circle.style("opacity", function(o) {return o[node_headers[column_index]] ==selectedVal ? 1 : highlight_trans;})
+      .style("stroke-width", function(o) {return o[node_headers[column_index]] ==selectedVal ? highlight_stroke : nominal_stroke;});
+    circle.attr("d", d3.svg.symbol().size(function(o) {return o[node_headers[column_index]] ==selectedVal ? highlight_node_size: node_size;}));
+    text.style("opacity", function(o) {return o[node_headers[column_index]] == selectedVal? 1 : highlight_trans;})
+    		.style("font-weight", function(o) {return o[node_headers[column_index]] == selectedVal || o[node_headers[column_index]] == selectedVal ? "bold" : "normal";})
+      .style("font-size", function(o) {return o[node_headers[column_index]] == selectedVal ? highlight_text_size + "px" : nominal_text_size + "px";});
+    if(node_headers[column_index] == "Cluster"){
+   	  link.style("opacity", function(o) {return o.source[node_headers[column_index]] == selectedVal || o.target[node_headers[column_index]] == selectedVal ? 1 : highlight_trans;})
+      		.style("stroke-width", function(o) {return o.source[node_headers[column_index]] == selectedVal || o.target[node_headers[column_index]] == selectedVal ? highlight_stroke : nominal_stroke;});
+  	 linktext.style("opacity", function(o) {return o.source[node_headers[column_index]] == selectedVal || o.target[node_headers[column_index]] == selectedVal ? 1 : highlight_trans;})
+     				 .style("font-weight", function(o) {return o.source[node_headers[column_index]] == selectedVal || o.target[node_headers[column_index]] == selectedVal ? "bold" : "normal";});
+    }
+    else{
+   	  link.style("opacity", highlight_trans);
+  	 linktext.style("opacity", highlight_trans);
+    }
   }
 }
 
-//////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
 function keydown() {
   if (d3.event.keyCode == 32) {
@@ -467,106 +525,69 @@ function isNumber(n) {
 }
 //});
 
-/////////////////END OF D3 GRAPH CODE/////////////START OF TABLE CODE/////////////////////
+/////////////END OF D3 GRAPH CODE///////////////
 
-/*
-// from colorbrewer (http://colorbrewer2.org/)
-var colours = ["#BAE4B3", "#74C476", "#31A354", "#006D2C"]; 
+/////////////START OF TABLE CODE////////////////
 
-// setup colours for choropleth
-var colScale = d3.scale.ordinal() 
-                  .range(colours);
-
-var jsonOutside;
+//jsfiddle friendly csv load
 //loading table data from csv
-var data = d3.csv.parse( d3.select("pre#data").text() );
-//var data = d3.csv("../data/nodes_100n_100e_5c_v1.csv");
-//d3.csv("../data/nodes_100n_100e_5c_v1.csv", function (data) {
+var data = d3.csv.parse( d3.select("pre#node_csv").text());
+
       jsonOutside = graph; // pass json to a global so tableRowClicked has access
-      var columns = ["ID","name","phone","email","IP","clusterID"];
-       var table = d3.select("#table_container").append("table"),
+
+      var table = d3.select("#table_container").append("table"),
              thead = table.append("thead"),
              tbody = table.append("tbody");
 
        // append the header row
        thead.append("tr")
              .selectAll("th")
-             .data(columns)
+             .data(node_headers)
              .enter()
              .append("th")
-             .text(function (column) { return column; });
+             .text(function (node_headers) { return node_headers; });
 
          // create a row for each object in the data
         var rows = tbody.selectAll("tr")
-             .data(data)
+             .data(graph.nodes)
              .enter()
-             .append("tr");
+             .append("tr")
+             .on();
 
-         // create a cell in each row for each column
+
+        // create a cell in each row for each column
         var cells = rows.selectAll("td")
-             .data(function (row) {
-                 return columns.map(function (column) {
-                     return { column: column, value: row[column] };
-                 });
-             })
+             .data(function (row) {return node_headers.map(function (node_headers) {return { column: node_headers, value: row[node_headers] };});})
              .enter()
              .append("td")
-             .text(function (d) { return d.value; }
-             )
-             .on("click", function (d) { tableRowClicked(d); }); // added on click eventto td         element NB you need to click on the cell with the conuty name
+             .text(function (d) { return d.value; })
+             .on("click", function (d) {
+             console.log("row clicked");
 
-        // add extents (max and min) from data results for choropleth
-        colScale.domain(d3.extent(data, function (d) { return d.Result; } ));
-
-        //Bind data and create one path per GeoJSON feature
-        g.selectAll("path")
-           .data(graph.features)
-           .enter()
-           .append("path")
-           .attr("d", path)
-           .attr("class", "feature")
-           .attr("id", function (d) { return d.properties.name; }) // added id so click could work on id which is common between the json and csv data
-           .on("click", function (d) { click(d); })
-           .style("stroke", "white")
-           .style("fill", function (d,i) { return colScale(d.properties.value); }); // fill based on colour scale
-
-        g.append("path")
-           .data(json.features)
-           .enter()
-           .append("path")
-           .attr("class", "mesh")
-           .attr("d", path);
-    //});
-
-//});
-
-function click(d) {
-
-    if (active === d) return reset();
-   g.selectAll(".active").classed("active", false);
-   d3.select("#"+d.properties.name).classed("active", active = d); // changed selection to id
-
-   var b = path.bounds(d);
-
-   g.transition().duration(750).attr("transform",
-       "translate(" + projection.translate() + ")"
-       + "scale(" + .95 / Math.max((b[1][0] - b[0][0]) / w, (b[1][1] - b[0][1]) / h) + ")"
-       + "translate(" + -(b[1][0] + b[0][0]) / 2 + "," + -(b[1][1] + b[0][1]) / 2 + ")");
-}
+             tableRowClicked(d);
+             });
 
 function reset() {
     g.selectAll(".active").classed("active", active = false);
     g.transition().duration(750).attr("transform", "");
 }
 
-function tableRowClicked(x) {
-
-    jsonOutside.features.forEach(function (d) { // loop through json data to match td entry
-        if (x.value === d.properties.name) {
-            var county = d;
-            click(d); // pass json element that matches td data to click
-        };
-    })
+function tableRowClicked(d) {
+  var column_index = node_headers.indexOf(d.column);
+  circle.style("opacity", function(o) {return o[node_headers[column_index]] ==d.value ? 1 : highlight_trans;})
+    .style("stroke-width", function(o) {return o[node_headers[column_index]] ==d.value ? highlight_stroke : nominal_stroke;});
+  circle.attr("d", d3.svg.symbol().size(function(o) {return o[node_headers[column_index]] ==d.value ? highlight_node_size: node_size;}));
+  text.style("opacity", function(o) {return o[node_headers[column_index]] == d.value? 1 : highlight_trans;})
+  		.style("font-weight", function(o) {return o[node_headers[column_index]] == d.value || o[node_headers[column_index]] == d.value ? "bold" : "normal";})
+    .style("font-size", function(o) {return o[node_headers[column_index]] == d.value ? highlight_text_size + "px" : nominal_text_size + "px";});
+  if(node_headers[column_index] == "Cluster"){
+   	link.style("opacity", function(o) {return o.source[node_headers[column_index]] == d.value || o.target[node_headers[column_index]] == d.value ? 1 : highlight_trans;})
+        .style("stroke-width", function(o) {return o.source[node_headers[column_index]] == d.value || o.target[node_headers[column_index]] == d.value ? highlight_stroke : nominal_stroke;});
+  	linktext.style("opacity", function(o) {return o.source[node_headers[column_index]] == d.value || o.target[node_headers[column_index]] == d.value ? 1 : highlight_trans;})
+    				.style("font-weight", function(o) {return o.source[node_headers[column_index]] == d.value || o.target[node_headers[column_index]] == d.value ? "bold" : "normal";});
+  }
+  else{
+   	link.style("opacity", highlight_trans);
+  	linktext.style("opacity", highlight_trans);
+  }
 }
-//});
-*/
