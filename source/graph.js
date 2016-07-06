@@ -66,9 +66,9 @@ var force = d3.layout.force()
   .size([w, h]);
 
 //Read the data from the mis element
-//var mis = document.getElementById('mis').innerHTML;
-//graph = JSON.parse(mis);
-d3.json("../data/graph_100n_100e_5c_v1.json", function(error, graph) {
+var mis = document.getElementById('mis').innerHTML;
+graph = JSON.parse(mis);
+//d3.json("../data/graph_100n_100e_5c_v1.json", function(error, graph) {
 //console.log(graph);
 /////////////////////////////START OF GRAPH CODE//////////////////////////////////////
 
@@ -465,13 +465,23 @@ function vis_by_link_score(score) {
 function isNumber(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
+//});
 
 /////////////////END OF D3 GRAPH CODE/////////////START OF TABLE CODE/////////////////////
 
+/*
+// from colorbrewer (http://colorbrewer2.org/)
+var colours = ["#BAE4B3", "#74C476", "#31A354", "#006D2C"]; 
+
+// setup colours for choropleth
+var colScale = d3.scale.ordinal() 
+                  .range(colours);
+
 var jsonOutside;
 //loading table data from csv
-//var data = d3.csv.parse( d3.select("pre#data").text() );
-var data = d3.csv("../data/nodes_100n_100e_5c_v1.csv");
+var data = d3.csv.parse( d3.select("pre#data").text() );
+//var data = d3.csv("../data/nodes_100n_100e_5c_v1.csv");
+//d3.csv("../data/nodes_100n_100e_5c_v1.csv", function (data) {
       jsonOutside = graph; // pass json to a global so tableRowClicked has access
       var columns = ["ID","name","phone","email","IP","clusterID"];
        var table = d3.select("#table_container").append("table"),
@@ -510,7 +520,7 @@ var data = d3.csv("../data/nodes_100n_100e_5c_v1.csv");
 
         //Bind data and create one path per GeoJSON feature
         g.selectAll("path")
-           .data(json.features)
+           .data(graph.features)
            .enter()
            .append("path")
            .attr("d", path)
@@ -558,4 +568,5 @@ function tableRowClicked(x) {
         };
     })
 }
-});
+//});
+*/
